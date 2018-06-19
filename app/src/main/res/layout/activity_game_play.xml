@@ -10,17 +10,15 @@
 
     <android.support.constraint.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <TextView
-            android:id="@+id/textView"
-            android:layout_width="wrap_content"
-            android:layout_height="134dp"
-            android:text="@{temp.pictureName, default=FFFFFF}" />
+        android:layout_height="match_parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent">
 
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="131dp"
+            android:id="@+id/imageView"
+            android:layout_width="159dp"
+            android:layout_height="141dp"
             android:contentDescription="TODO"
             android:src="@{temp.picture, default=@drawable/exit}"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -28,5 +26,28 @@
             app:layout_constraintHorizontal_bias="0.5"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+
+        <!--RelativeLayout
+            android:id="@+id/rl"
+            android:layout_width="174dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/imageView"-->
+
+        <LinearLayout
+            android:id="@+id/ll"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginBottom="145dp"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.501"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/imageView"></LinearLayout>
+        <!--/RelativeLayout-->
     </android.support.constraint.ConstraintLayout>
 </layout>
