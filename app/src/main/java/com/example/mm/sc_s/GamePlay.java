@@ -21,7 +21,7 @@ import java.util.ArrayList;
 
 public class GamePlay extends AppCompatActivity {
     public Drawable picture;
-    private Drawable[] answers;
+    private Drawable[] answers = new Drawable[4];
     private Drawable[] word;
     private int wordSize;
 
@@ -76,6 +76,16 @@ public class GamePlay extends AppCompatActivity {
             iv.setImageDrawable(res.getDrawable(resId));
             lay_r_capture.addView(iv);
         }
+
+        String[] answersNames = text.get(2).split(",");
+
+        for(int i = 0; i < 4; i++)
+        {
+            int resId = res.getIdentifier(answersNames[i] , "drawable", getPackageName());
+            answers[i] = res.getDrawable(resId);
+        }
+
+        binding.setAnswers(answers);
     }
 
     @Override
