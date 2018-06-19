@@ -1,11 +1,18 @@
 package com.example.mm.sc_s;
 
+import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.databinding.DataBindingUtil;
 import android.graphics.drawable.Drawable;
+import android.media.MediaPlayer;
+import android.provider.ContactsContract;
 import android.renderscript.ScriptGroup;
+import android.support.v4.view.MotionEventCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.SparseIntArray;
+import android.view.MotionEvent;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -18,13 +25,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+
+import static android.view.View.X;
+import static android.view.View.Y;
 
 public class GamePlay extends AppCompatActivity {
     public Drawable picture;
     private Drawable[] answers = new Drawable[4];
     private Drawable[] word;
     private int wordSize;
-
 
     public GamePlay()
     {
@@ -39,6 +51,7 @@ public class GamePlay extends AppCompatActivity {
         binding.setTemp(this);
 
         Resources res = getResources();
+
         InputStream is = res.openRawResource(R.raw.player1);
         BufferedReader buffreader = new BufferedReader(new InputStreamReader(is));
         String line;
@@ -55,6 +68,7 @@ public class GamePlay extends AppCompatActivity {
         //get the picture
         int resourceId = res.getIdentifier(text.get(0) , "drawable", getPackageName());
         picture = res.getDrawable(resourceId);
+        findViewById(R.id.imageView).setId(resourceId);
 
         //get the letters from word
         String[] wordLetters = text.get(1).split(",");
@@ -73,6 +87,7 @@ public class GamePlay extends AppCompatActivity {
             ImageView iv = new ImageView(this);
             int resId = res.getIdentifier(s , "drawable", getPackageName());
             iv.setLayoutParams(lp);
+            iv.setId(resId);
             iv.setImageDrawable(res.getDrawable(resId));
             lay_r_capture.addView(iv);
         }
@@ -83,9 +98,12 @@ public class GamePlay extends AppCompatActivity {
         {
             int resId = res.getIdentifier(answersNames[i] , "drawable", getPackageName());
             answers[i] = res.getDrawable(resId);
+            int originalId = res.getIdentifier("answer"+(i+1) , "id", getPackageName());
+            findViewById(originalId).setId(resId);
         }
 
         binding.setAnswers(answers);
+
     }
 
     @Override
@@ -93,5 +111,13 @@ public class GamePlay extends AppCompatActivity {
     {
         super.onStart();
 
+    }
+
+    public void sound(View view)
+    {
+        String name = getResources().getResourceEntryName(view.getId());
+        int soundId = getResources().getIdentifier(name , "raw", getPackageName());
+        MediaPlayer ring= MediaPlayer.create(this,soundId);
+        ring.start();
     }
 }
