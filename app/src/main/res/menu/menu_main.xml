@@ -1,0 +1,26 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.example.mm.sc_s.MainActivity">
+
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:title="@string/action_settings"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/manage_players"
+        android:title="Players"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/sample_text"
+        android:title="sample"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/about_us"
+        android:title="About Us"
+        app:showAsAction="never"/>
+</menu>
