@@ -31,7 +31,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.lang.reflect.Constructor;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,22 +45,21 @@ import static java.lang.System.exit;
 
 public class GamePlay extends AppCompatActivity {
     public Drawable picture;
+    private int questionId;
     private Drawable[] answers = new Drawable[4];
     private Drawable[] word;
     private int wordSize;
     private boolean answeredRight = false;
     private String correctAnswer;
+    private String m_error;
+    private Resources res;
+    private String correctId;
 
-    @SuppressLint("ClickableViewAccessibility")
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        ActivityGamePlayBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_game_play);
-        binding.setTemp(this);
-
+    private ArrayList<String> readFromFile(int id)
+    {
         Resources res = getResources();
 
-        InputStream is = res.openRawResource(R.raw.player1);
+        InputStream is = res.openRawResource(id);
         BufferedReader buffreader = new BufferedReader(new InputStreamReader(is));
         String line;
         ArrayList<String> text = new ArrayList<>();
@@ -68,13 +69,55 @@ public class GamePlay extends AppCompatActivity {
                 text.add(line);
             }
         } catch (IOException e) {
-            return;
+            return null;
         }
+
+        try {
+            buffreader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            is.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return text;
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        res = getResources();
+
+        if(savedInstanceState == null)
+        {
+            questionId = R.raw.q_1;
+        } else
+        {
+            questionId = res.getIdentifier("q_2", "raw", getPackageName());//savedInstanceState.getInt("currentQuestion");
+        }
+
+        ActivityGamePlayBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_game_play);
+        initializeGame(questionId);
+
+        binding.setTemp(this);
+        binding.setAnswers(answers);
+
+    }
+
+    private void initializeGame(int questionId)
+    {
+
+        ArrayList<String> text = readFromFile(questionId);
 
         //get the picture
         int resourceId = res.getIdentifier(text.get(0), "drawable", getPackageName());
         picture = res.getDrawable(resourceId);
-        findViewById(R.id.imageView).setId(resourceId);
+        ((ImageView) findViewById(R.id.imageView)).setImageDrawable(picture);
 
         //create the word
         Word myWord = new Word(text.get(0));
@@ -83,6 +126,7 @@ public class GamePlay extends AppCompatActivity {
         String[] wordLetters = text.get(2).split(",");
         wordSize = wordLetters.length;
         LinearLayout lay_r_capture = findViewById(R.id.ll);
+        lay_r_capture.removeAllViews();
         lay_r_capture.setOrientation(LinearLayout.HORIZONTAL);
         lay_r_capture.setGravity(11);
         lay_r_capture.setWeightSum(wordSize);
@@ -106,87 +150,89 @@ public class GamePlay extends AppCompatActivity {
             iv.setImageDrawable(res.getDrawable(resId));
             lay_r_capture.addView(iv);
             iv.setOnDragListener(new View.OnDragListener() {
-                    @SuppressLint("ResourceType")
-                    @TargetApi(Build.VERSION_CODES.M)
-                    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
-                    @Override
-                    public boolean onDrag(View v, DragEvent event) {
-                        int action = event.getAction();
-                        switch (event.getAction()) {
-                            case DragEvent.ACTION_DRAG_STARTED:
-                                return true;
-                            case DragEvent.ACTION_DRAG_ENTERED:
-                                break;
-                            case DragEvent.ACTION_DRAG_ENDED:
-                                break;
-                            case DragEvent.ACTION_DROP:
-                                // Dropped, reassign View to ViewGroup
-                                ImageView view = (ImageView) event.getLocalState();
-                                ViewGroup owner = (ViewGroup) view.getParent();
-                                //owner.removeView(view);
-                                Resources res = getResources();
-                                boolean isSpace = res.getResourceEntryName(v.getId()).equals("space");
-                                if(isSpace && correctAnswer.equals(res.getResourceEntryName(view.getId())))
-                                {
-                                    ((ImageView) v).setImageDrawable(res.getDrawable(view.getId()));
-                                    answeredRight = true;
+                @SuppressLint("ResourceType")
+                @TargetApi(Build.VERSION_CODES.M)
+                @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
+                @Override
+                public boolean onDrag(View v, DragEvent event) {
+                    int action = event.getAction();
+                    switch (event.getAction()) {
+                        case DragEvent.ACTION_DRAG_STARTED:
+                            return true;
+                        case DragEvent.ACTION_DRAG_ENTERED:
+                            break;
+                        case DragEvent.ACTION_DRAG_ENDED:
+                            break;
+                        case DragEvent.ACTION_DROP:
+                            // Dropped, reassign View to ViewGroup
+                            ImageView view = (ImageView) event.getLocalState();
+                            ViewGroup owner = (ViewGroup) view.getParent();
+                            //owner.removeView(view);
+
+                            boolean isSpace = res.getResourceEntryName(v.getId()).equals("space");
+                            if(isSpace && correctId.equals(res.getResourceEntryName(view.getId())))
+                            {
+                                int answerId = res.getIdentifier(correctAnswer, "drawable", getPackageName());
+                                ((ImageView) v).setImageDrawable(res.getDrawable(answerId));
+                                answeredRight = true;
+                                //TODO add some happy stupid audio
+                                initializeGame(R.raw.q_2);
+                                return false;
+                            }
+                            return true;
+                    }
+                    return false;
+                }
+            });
+        }
+
+        String[] answersNames = text.get(3).split(",");
+
+        //generating the answers
+        for (i = 0; i < 4; i++) {
+            if(correctAnswer.equals(answersNames[i]))
+                correctId = "answer" + Integer.toString(i+1);
+            int resId = res.getIdentifier(answersNames[i], "drawable", getPackageName());
+            answers[i] = res.getDrawable(resId);
+            int originalId = res.getIdentifier("answer" + (i + 1), "id", getPackageName());
+            ImageView iv = findViewById(originalId);
+            iv.setImageDrawable(answers[i]);
+            iv.setOnTouchListener(
+                    new View.OnTouchListener() {
+                        private boolean touched = false;
+
+                        @Override
+                        public boolean onTouch(View view, MotionEvent event) {
+                            if (!touched) {
+                                //sound(view);
+                                touched = true;
+                            }
+                            switch (event.getAction()) {
+                                case MotionEvent.ACTION_DOWN: {
+                                    String imgName = res.getResourceEntryName(view.getId());
+                                    ClipData data = ClipData.newPlainText("name", imgName);
+                                    View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(view);
+                                    view.startDrag(data, shadowBuilder, view, 0);
+                                    view.setVisibility(View.INVISIBLE);
+                                    return true;
+                                }
+                                case MotionEvent.ACTION_UP:
+                                case MotionEvent.ACTION_CANCEL: {
+                                    touched = false;
+                                    if (!correctAnswer.equals(res.getResourceEntryName(view.getId()))) {
+                                        view.setVisibility(View.VISIBLE);
+                                        return true;
+                                    }
                                     return false;
                                 }
-                                return true;
-                        }
-                        return false;
-                    }
-                });
-        }
-
-            String[] answersNames = text.get(3).split(",");
-
-            for (i = 0; i < 4; i++) {
-                int resId = res.getIdentifier(answersNames[i], "drawable", getPackageName());
-                answers[i] = res.getDrawable(resId);
-                int originalId = res.getIdentifier("answer" + (i + 1), "id", getPackageName());
-                ImageView iv = findViewById(originalId);
-                iv.setId(resId);
-                iv.setOnTouchListener(
-                        new View.OnTouchListener() {
-                            private boolean touched = false;
-
-                            @Override
-                            public boolean onTouch(View view, MotionEvent event) {
-                                if (!touched) {
-                                    //sound(view);
-                                    touched = true;
-                                }
-                                    switch (event.getAction()) {
-                                        case MotionEvent.ACTION_DOWN: {
-                                            String imgName = getResources().getResourceEntryName(view.getId());
-                                            ClipData data = ClipData.newPlainText("name", imgName);
-                                            View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(view);
-                                            view.startDrag(data, shadowBuilder, view, 0);
-                                            view.setVisibility(View.INVISIBLE);
-                                            return true;
-                                        }
-                                        case MotionEvent.ACTION_UP:
-                                        case MotionEvent.ACTION_CANCEL: {
-                                            touched = false;
-                                            if(!correctAnswer.equals(getResources().getResourceEntryName(view.getId())))
-                                            {
-                                                view.setVisibility(View.VISIBLE);
-                                                return true;
-                                            }
-                                            return false;
-                                        }
-                                        default:
-                                            break;
-                                    }
-                                return true;
+                                default:
+                                    break;
                             }
-                        });
-
-                binding.setAnswers(answers);
-
-            }
+                            return true;
+                        }
+                    });
         }
+    }
 
     @Override
     protected void onStart()
@@ -195,6 +241,14 @@ public class GamePlay extends AppCompatActivity {
 
     }
 
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        outState.putInt("currentQuestion", questionId);
+        outState.putString("errorType", m_error);
+
+        // call superclass to save any view hierarchy
+        super.onSaveInstanceState(outState);
+    }
     public void sound(View view)
     {
         Resources res = getResources();
