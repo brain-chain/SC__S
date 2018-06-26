@@ -126,8 +126,7 @@ public class GamePlay extends AppCompatActivity {
                                 //owner.removeView(view);
                                 Resources res = getResources();
                                 boolean isSpace = res.getResourceEntryName(v.getId()).equals("space");
-                                String dsf = res.getResourceEntryName(view.getId());
-                                if(isSpace && dsf.equals(correctAnswer))
+                                if(isSpace && correctAnswer.equals(res.getResourceEntryName(view.getId())))
                                 {
                                     ((ImageView) v).setImageDrawable(res.getDrawable(view.getId()));
                                     answeredRight = true;
@@ -158,7 +157,6 @@ public class GamePlay extends AppCompatActivity {
                                     //sound(view);
                                     touched = true;
                                 }
-                                if (event.getAction() == MotionEvent.ACTION_DOWN)
                                     switch (event.getAction()) {
                                         case MotionEvent.ACTION_DOWN: {
                                             String imgName = getResources().getResourceEntryName(view.getId());
@@ -169,13 +167,14 @@ public class GamePlay extends AppCompatActivity {
                                             return true;
                                         }
                                         case MotionEvent.ACTION_UP:
-                                            exit(-1);
-                                            int i = 5;
                                         case MotionEvent.ACTION_CANCEL: {
-                                            exit(-7);
                                             touched = false;
-                                            if(!answeredRight) view.setVisibility(View.VISIBLE);
-                                            return true;
+                                            if(!correctAnswer.equals(getResources().getResourceEntryName(view.getId())))
+                                            {
+                                                view.setVisibility(View.VISIBLE);
+                                                return true;
+                                            }
+                                            return false;
                                         }
                                         default:
                                             break;
