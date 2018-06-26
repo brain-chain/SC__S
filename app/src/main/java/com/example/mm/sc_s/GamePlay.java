@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -46,6 +47,7 @@ public class GamePlay extends AppCompatActivity {
     private Drawable[] word;
     private int wordSize;
     private boolean answeredRight = false;
+    private String correctAnswer;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -74,28 +76,37 @@ public class GamePlay extends AppCompatActivity {
         picture = res.getDrawable(resourceId);
         findViewById(R.id.imageView).setId(resourceId);
 
+        //create the word
+        Word myWord = new Word(text.get(0));
+
         //get the letters from word
-        String[] wordLetters = text.get(1).split(",");
+        String[] wordLetters = text.get(2).split(",");
         wordSize = wordLetters.length;
         LinearLayout lay_r_capture = findViewById(R.id.ll);
-        //LinearLayout.LayoutParams layparam = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         lay_r_capture.setOrientation(LinearLayout.HORIZONTAL);
         lay_r_capture.setGravity(11);
         lay_r_capture.setWeightSum(wordSize);
-        //lay_r_capture.setLayoutParams(layparam);
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(100, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
         lp.setMargins(1, 1, 1, 1);
+        int i = 0;
+        int spaceIndex = Integer.parseInt(text.get(1));
         for (String s : wordLetters)
         {
+            i++;
+            if(i == spaceIndex)
+            {
+                correctAnswer = s;
+                s = "space";
+            }
             ImageView iv = new ImageView(this);
             int resId = res.getIdentifier(s, "drawable", getPackageName());
             iv.setLayoutParams(lp);
             iv.setId(resId);
             iv.setImageDrawable(res.getDrawable(resId));
             lay_r_capture.addView(iv);
-            if (s.equals("space"))
-                iv.setOnDragListener(new View.OnDragListener() {
+            iv.setOnDragListener(new View.OnDragListener() {
+                    @SuppressLint("ResourceType")
                     @TargetApi(Build.VERSION_CODES.M)
                     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
                     @Override
@@ -110,14 +121,18 @@ public class GamePlay extends AppCompatActivity {
                                 break;
                             case DragEvent.ACTION_DROP:
                                 // Dropped, reassign View to ViewGroup
-                                View view = (View) event.getLocalState();
+                                ImageView view = (ImageView) event.getLocalState();
                                 ViewGroup owner = (ViewGroup) view.getParent();
-                                owner.removeView(view);
+                                //owner.removeView(view);
                                 Resources res = getResources();
-                                String name = res.getResourceEntryName(view.getId());
-                                int id = res.getIdentifier(name , "drawable", getPackageName());
-                                ((ImageView) v).setImageDrawable(res.getDrawable(id));
-                                answeredRight = true;
+                                boolean isSpace = res.getResourceEntryName(v.getId()).equals("space");
+                                String dsf = res.getResourceEntryName(view.getId());
+                                if(isSpace && dsf.equals(correctAnswer))
+                                {
+                                    ((ImageView) v).setImageDrawable(res.getDrawable(view.getId()));
+                                    answeredRight = true;
+                                    return false;
+                                }
                                 return true;
                         }
                         return false;
@@ -125,9 +140,9 @@ public class GamePlay extends AppCompatActivity {
                 });
         }
 
-            String[] answersNames = text.get(2).split(",");
+            String[] answersNames = text.get(3).split(",");
 
-            for (int i = 0; i < 4; i++) {
+            for (i = 0; i < 4; i++) {
                 int resId = res.getIdentifier(answersNames[i], "drawable", getPackageName());
                 answers[i] = res.getDrawable(resId);
                 int originalId = res.getIdentifier("answer" + (i + 1), "id", getPackageName());
