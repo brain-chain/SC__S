@@ -98,7 +98,7 @@ public class GamePlay extends AppCompatActivity {
             questionId = R.raw.q_1;
         } else
         {
-            questionId = res.getIdentifier("q_2", "raw", getPackageName());//savedInstanceState.getInt("currentQuestion");
+            savedInstanceState.getInt("currentQuestion");
         }
 
         ActivityGamePlayBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_game_play);
@@ -109,7 +109,7 @@ public class GamePlay extends AppCompatActivity {
 
     }
 
-    private void initializeGame(int questionId)
+    private void initializeGame(final int questionId)
     {
 
         ArrayList<String> text = readFromFile(questionId);
@@ -155,6 +155,8 @@ public class GamePlay extends AppCompatActivity {
                 @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
                 @Override
                 public boolean onDrag(View v, DragEvent event) {
+                    int numberOfQuestions = 3;
+                    int maxId = R.raw.q_1+numberOfQuestions-1;
                     int action = event.getAction();
                     switch (event.getAction()) {
                         case DragEvent.ACTION_DRAG_STARTED:
@@ -176,7 +178,8 @@ public class GamePlay extends AppCompatActivity {
                                 ((ImageView) v).setImageDrawable(res.getDrawable(answerId));
                                 answeredRight = true;
                                 //TODO add some happy stupid audio
-                                initializeGame(R.raw.q_2);
+                                if(questionId+1 <= maxId) initializeGame(questionId+1);
+                                else finish();
                                 return false;
                             }
                             return true;
@@ -238,16 +241,16 @@ public class GamePlay extends AppCompatActivity {
     protected void onStart()
     {
         super.onStart();
-
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
+        // call superclass to save any view hierarchy
+        super.onSaveInstanceState(outState);
+
         outState.putInt("currentQuestion", questionId);
         outState.putString("errorType", m_error);
 
-        // call superclass to save any view hierarchy
-        super.onSaveInstanceState(outState);
     }
     public void sound(View view)
     {
