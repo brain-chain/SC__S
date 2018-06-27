@@ -3,6 +3,7 @@ package com.example.mm.sc_s;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.ClipData;
+import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.databinding.DataBindingUtil;
@@ -45,7 +46,7 @@ import static java.lang.System.exit;
 
 public class GamePlay extends AppCompatActivity {
     public Drawable picture;
-    private int questionId;
+    private int m_id;
     private Drawable[] answers = new Drawable[4];
     private Drawable[] word;
     private int wordSize;
@@ -54,6 +55,7 @@ public class GamePlay extends AppCompatActivity {
     private String m_error;
     private Resources res;
     private String correctId;
+    private boolean gameFinished = false;
 
     private ArrayList<String> readFromFile(int id)
     {
@@ -91,18 +93,15 @@ public class GamePlay extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+        m_id = preferences.getInt("currentQuestion", 0);
+
         res = getResources();
 
-        if(savedInstanceState == null)
-        {
-            questionId = R.raw.q_1;
-        } else
-        {
-            savedInstanceState.getInt("currentQuestion");
-        }
+        if(m_id == 0) m_id = R.raw.q_1;
 
         ActivityGamePlayBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_game_play);
-        initializeGame(questionId);
+        initializeGame(m_id);
 
         binding.setTemp(this);
         binding.setAnswers(answers);
@@ -111,6 +110,7 @@ public class GamePlay extends AppCompatActivity {
 
     private void initializeGame(final int questionId)
     {
+        m_id = questionId;
 
         ArrayList<String> text = readFromFile(questionId);
 
@@ -179,7 +179,11 @@ public class GamePlay extends AppCompatActivity {
                                 answeredRight = true;
                                 //TODO add some happy stupid audio
                                 if(questionId+1 <= maxId) initializeGame(questionId+1);
-                                else finish();
+                                else
+                                {
+                                    gameFinished = true;
+                                    finish();
+                                }
                                 return false;
                             }
                             return true;
@@ -244,14 +248,52 @@ public class GamePlay extends AppCompatActivity {
     }
 
     @Override
-    public void onSaveInstanceState(Bundle outState) {
-        // call superclass to save any view hierarchy
-        super.onSaveInstanceState(outState);
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        int id = res.getIdentifier(savedInstanceState.getString("currentQuestion"), "raw", getPackageName());
+        initializeGame(id);
+    }
 
-        outState.putInt("currentQuestion", questionId);
-        outState.putString("errorType", m_error);
+    @Override
+    public void onResume()
+    {
+        super.onResume();
+    }
+
+
+    @Override
+    public void onPause()
+    {
+        super.onPause();
+
+        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+
+        editor.putInt("currentQuestion", m_id);
+        editor.commit();
+    }
+
+    @Override
+    public void onStop()
+    {
+        super.onStop();
+    }
+
+    @Override
+    public void onDestroy()
+    {
+        super.onDestroy();
+
+        if(gameFinished)
+        {
+            SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+            SharedPreferences.Editor editor = preferences.edit();
+
+            editor.clear();
+            editor.commit();
+        }
 
     }
+
     public void sound(View view)
     {
         Resources res = getResources();
