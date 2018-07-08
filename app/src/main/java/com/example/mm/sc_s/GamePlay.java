@@ -33,11 +33,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import static android.view.View.X;
@@ -50,12 +54,15 @@ public class GamePlay extends AppCompatActivity {
     private Drawable[] answers = new Drawable[4];
     private Drawable[] word;
     private int wordSize;
+    private ArrayList<String> m_questions;
+    private ArrayList<String> m_futureQuestions;
     private boolean answeredRight = false;
     private String correctAnswer;
-    private String m_error;
+    private ArrayList<Error> m_error;
     private Resources res;
     private String correctId;
     private boolean gameFinished = false;
+
 
     private ArrayList<String> readFromFile(int id)
     {
@@ -95,10 +102,14 @@ public class GamePlay extends AppCompatActivity {
 
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
         m_id = preferences.getInt("currentQuestion", 0);
+        m_questions = getList(preferences.getString("questions", null));
+        m_futureQuestions = getList(preferences.getString("futureQuestions", null));
+        m_error = Error.toError(getList(preferences.getString("error", null)));
 
         res = getResources();
 
-        if(m_id == 0) m_id = R.raw.q_1;
+        if(m_futureQuestions == null) createQuestionList();
+        m_id = pickQuestion();
 
         ActivityGamePlayBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_game_play);
         initializeGame(m_id);
@@ -108,10 +119,57 @@ public class GamePlay extends AppCompatActivity {
 
     }
 
+    private void createQuestionList()
+    {
+        Field[] fields=R.raw.class.getFields();
+        m_questions = new ArrayList<>();
+        m_futureQuestions = new ArrayList<>();
+
+        //add questions to list
+        for(int count=0; count < fields.length; count++)
+        {
+            String file = fields[count].getName();
+            if(fields[count].getName().startsWith("q"))
+            {
+                m_questions.add(file);
+                m_futureQuestions.add(file);
+            }
+        }
+    }
+
+    private ArrayList<String> getList(String q)
+    {
+        if(q == null) return null;
+
+        String[] questions = q.split(" ");
+
+        return new ArrayList<String>(Arrays.asList(questions));
+    }
+
+    private int pickQuestion()
+    {
+        int identifier = -1;
+        // if no future questions exist, return -1;
+        if(m_futureQuestions.isEmpty()) return identifier;
+
+        // pick randomly if no error was made earlier
+        if(m_error.isEmpty())
+        {
+            int rand = (int)(Math.random()*m_futureQuestions.size());
+            String questionName = m_futureQuestions.get(rand);
+            m_futureQuestions.remove(questionName);
+
+            identifier = res.getIdentifier(questionName, "raw", getPackageName());
+        }
+
+        //TODO check errors
+
+        return identifier;
+    }
+
     private void initializeGame(final int questionId)
     {
         m_id = questionId;
-
         ArrayList<String> text = readFromFile(questionId);
 
         //get the picture
@@ -155,9 +213,8 @@ public class GamePlay extends AppCompatActivity {
                 @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
                 @Override
                 public boolean onDrag(View v, DragEvent event) {
-                    int numberOfQuestions = 3;
-                    int maxId = R.raw.q_1+numberOfQuestions-1;
-                    int action = event.getAction();
+                    int numberOfQuestions = 10;
+
                     switch (event.getAction()) {
                         case DragEvent.ACTION_DRAG_STARTED:
                             return true;
@@ -178,10 +235,17 @@ public class GamePlay extends AppCompatActivity {
                                 ((ImageView) v).setImageDrawable(res.getDrawable(answerId));
                                 answeredRight = true;
                                 //TODO add some happy stupid audio
-                                if(questionId+1 <= maxId) initializeGame(questionId+1);
+                                int nextQuestion = pickQuestion();
+
+                                if(nextQuestion > 0)
+                                {
+                                    m_id = nextQuestion;
+                                    initializeGame(m_id);
+                                }
                                 else
                                 {
                                     gameFinished = true;
+                                    //TODO add some end Screen and stupider audio
                                     finish();
                                 }
                                 return false;
@@ -200,7 +264,9 @@ public class GamePlay extends AppCompatActivity {
             if(correctAnswer.equals(answersNames[i]))
                 correctId = "answer" + Integer.toString(i+1);
             int resId = res.getIdentifier(answersNames[i], "drawable", getPackageName());
-            answers[i] = res.getDrawable(resId);
+
+            try{answers[i] = res.getDrawable(resId);} catch (Resources.NotFoundException e)
+            { System.out.print(answersNames[i]); }
             int originalId = res.getIdentifier("answer" + (i + 1), "id", getPackageName());
             ImageView iv = findViewById(originalId);
             iv.setImageDrawable(answers[i]);
