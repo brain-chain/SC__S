@@ -51,7 +51,7 @@ import static java.lang.System.exit;
 public class GamePlay extends AppCompatActivity {
     public Drawable picture;
     private int m_id;
-    private Drawable[] answers = new Drawable[4];
+    private Drawable[] m_answers = new Drawable[4];
     private Drawable[] word;
     private int wordSize;
     private ArrayList<String> m_questions;
@@ -115,7 +115,7 @@ public class GamePlay extends AppCompatActivity {
         initializeGame(m_id);
 
         binding.setTemp(this);
-        binding.setAnswers(answers);
+        binding.setAnswers(m_answers);
 
     }
 
@@ -257,7 +257,8 @@ public class GamePlay extends AppCompatActivity {
             });
         }
 
-        String[] answersNames = text.get(3).split(",");
+        //String[] answersNames = text.get(3).split(",");
+        String[] answersNames = getAnswers(correctAnswer, m_error);
 
         //generating the answers
         for (i = 0; i < 4; i++) {
@@ -265,11 +266,11 @@ public class GamePlay extends AppCompatActivity {
                 correctId = "answer" + Integer.toString(i+1);
             int resId = res.getIdentifier(answersNames[i], "drawable", getPackageName());
 
-            try{answers[i] = res.getDrawable(resId);} catch (Resources.NotFoundException e)
-            { System.out.print(answersNames[i]); }
+            m_answers[i] = res.getDrawable(resId);
+
             int originalId = res.getIdentifier("answer" + (i + 1), "id", getPackageName());
             ImageView iv = findViewById(originalId);
-            iv.setImageDrawable(answers[i]);
+            iv.setImageDrawable(m_answers[i]);
             iv.setOnTouchListener(
                     new View.OnTouchListener() {
                         private boolean touched = false;
@@ -307,6 +308,55 @@ public class GamePlay extends AppCompatActivity {
         }
     }
 
+    private String[] getAnswers(String correctAnswer, ArrayList<Error> error)
+    {
+        String[] answers = new String[4];
+
+        answers[(int)(Math.random()*4)] = correctAnswer;
+
+        if(!error.isEmpty())
+        {
+            //TODO generate answers by errors
+        }
+
+        Field[] fields=R.drawable.class.getFields();
+
+        int rand;
+
+        for(int i = 0; i < 4;)
+        {
+            if(answers[i] != null)
+            {
+                i++;
+                continue;
+            }
+
+            while(answers[i] == null)
+            {
+                rand = (int)(Math.random()*fields.length);
+
+                String file = fields[rand].getName();
+
+                // if the file is a syllab, add it to answers
+                if(isValidAnswer(file))
+                    answers[i] = file;
+            }
+            i++;
+
+        }
+
+        return answers;
+    }
+
+    public boolean isValidAnswer(String s)
+    {
+        String[] vowels = {"a","aa","e","ee","i","ii","o","oo","u","uu","s","sn","n"};
+        ArrayList<String> vow = new ArrayList<String>(Arrays.asList(vowels));
+
+        String[] splitAnswer = s.split("_");
+
+        return vow.contains(splitAnswer[0]) && splitAnswer.length == 2;
+    }
     @Override
     protected void onStart()
     {

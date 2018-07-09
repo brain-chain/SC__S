@@ -14,6 +14,7 @@
     <android.support.constraint.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@drawable/background"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent">
@@ -75,9 +76,10 @@
 
         <ImageView
             android:id="@+id/imageView"
-            android:layout_width="159dp"
+            android:layout_width="143dp"
             android:layout_height="141dp"
             android:contentDescription="TODO"
+            android:cropToPadding="false"
             android:onClick="sound"
             android:src="@{temp.picture, default=@drawable/exit}"
             app:layout_constraintBottom_toBottomOf="parent"
