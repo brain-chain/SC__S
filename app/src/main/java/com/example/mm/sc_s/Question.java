@@ -7,7 +7,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Created by mm on 18/06/2018.
@@ -15,53 +17,102 @@ import java.util.ArrayList;
 
 public class Question
 {
-    private Resources resources;
     private int id;
+    private String name;
+    private String fileName;
+    private String[] word;
+    private String correctAnswer;
+    private ArrayList<String> m_answers;
 
-    private ArrayList<String> readFromFile(int id)
+    public Question(int questionId, String file, String wordName, String trueAnswer, String[] syllabs)
     {
-        InputStream is = resources.openRawResource(id);
-        BufferedReader buffreader = new BufferedReader(new InputStreamReader(is));
-        String line;
-        ArrayList<String> text = new ArrayList<>();
+        id = questionId;
+        fileName = file;
+        name = wordName;
+        correctAnswer = trueAnswer;
 
-        try {
-            while ((line = buffreader.readLine()) != null) {
-                text.add(line);
+        m_answers = new ArrayList<>();
+        m_answers.add(correctAnswer);
+
+        word = syllabs;
+    }
+
+    public String getAnswer() { return correctAnswer; }
+
+    public int getId() { return id; }
+
+    public String getName() { return name; }
+
+
+    public void addAnswer(String key, String value)
+    {
+        Field[] fields=R.drawable.class.getFields();
+
+        String forSearch = key.equals("consonant") ? "_"+value : value;
+
+        for(Field f : fields)
+        {
+            //add the appropriate answer for the known error
+            if(f.getName().contains(forSearch) && !f.getName().equals(correctAnswer))
+                m_answers.add(1, f.getName());
+
+            //keep the number of answers 4
+            if(m_answers.size() > 4)
+                m_answers.remove(4);
+        }
+    }
+
+    public String[] getWord()
+    {
+        return word;
+    }
+
+    public String[] getAnswers()
+    {
+        while (m_answers.size() < 4)
+        {
+            Field[] fields = R.drawable.class.getFields();
+
+            int rand = (int) (Math.random() * fields.length);
+
+            String file = fields[rand].getName();
+
+            // if the file is a syllab, add it to answers
+            if (isValidAnswer(file))
+                m_answers.add(file);
+        }
+
+        String[] answers = new String[4];
+
+        answers[(int) (Math.random() * 4)] = correctAnswer;
+
+        int j = 1;
+        for(int i = 0; i < 4; )
+        {
+            if (answers[i] != null)
+            {
+                i++;
+                continue;
             }
-        } catch (IOException e) {
-            return null;
+
+            answers[i] = m_answers.get(j++);
         }
 
-        try {
-            buffreader.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            is.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return text;
+        return answers;
     }
 
-    public Question(Resources res, int questionId)
+    public boolean isValidAnswer(String s)
     {
-        resources = res;
-        ArrayList<String> text = readFromFile(questionId);
+        String[] vowels = {"a","aa","e","ee","i","ii","o","oo","u","uu","s","sn","n"};
+        ArrayList<String> vow = new ArrayList<String>(Arrays.asList(vowels));
 
+        String[] splitAnswer = s.split("_");
 
+        return vow.contains(splitAnswer[0]) && splitAnswer.length == 2;
     }
 
-    /**
-     *  The function presents a multiple choice question to user,
-     *  returns null if he was right, else his error type
-     */
-    public Error play()
+    public String getFileName()
     {
-
-        return null;
+        return fileName;
     }
 }

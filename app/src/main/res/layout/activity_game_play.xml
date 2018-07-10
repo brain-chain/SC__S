@@ -89,15 +89,6 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0.432" />
 
-        <!--RelativeLayout
-            android:id="@+id/rl"
-            android:layout_width="174dp"
-            android:layout_height="40dp"
-            android:layout_marginTop="15dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.5"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/imageView"-->
 
         <LinearLayout
             android:id="@+id/ll"
@@ -111,6 +102,5 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/imageView"
             app:layout_constraintVertical_bias="0.0"></LinearLayout>
-        <!--/RelativeLayout-->
     </android.support.constraint.ConstraintLayout>
 </layout>

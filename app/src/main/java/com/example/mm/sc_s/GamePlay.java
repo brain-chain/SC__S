@@ -39,6 +39,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Queue;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -54,14 +55,16 @@ public class GamePlay extends AppCompatActivity {
     private Drawable[] m_answers = new Drawable[4];
     private Drawable[] word;
     private int wordSize;
-    private ArrayList<String> m_questions;
-    private ArrayList<String> m_futureQuestions;
+    private ArrayList<Question> m_questions;
+    private ArrayList<Question> m_futureQuestions;
     private boolean answeredRight = false;
     private String correctAnswer;
     private ArrayList<Error> m_error;
     private Resources res;
-    private String correctId;
     private boolean gameFinished = false;
+    private int soundId;
+    private String[] m_answersNames;
+    private int numberOfQuestions;
 
 
     private ArrayList<String> readFromFile(int id)
@@ -101,22 +104,43 @@ public class GamePlay extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-        m_id = preferences.getInt("currentQuestion", 0);
-        m_questions = getList(preferences.getString("questions", null));
-        m_futureQuestions = getList(preferences.getString("futureQuestions", null));
+        preferences.edit().clear().commit();
+
+        m_questions = getQuestionList(preferences.getString("questions", null));
+        m_futureQuestions = getQuestionList(preferences.getString("futureQuestions", null));
+
         m_error = Error.toError(getList(preferences.getString("error", null)));
 
         res = getResources();
 
-        if(m_futureQuestions == null) createQuestionList();
-        m_id = pickQuestion();
+        //means no previous state was saved
+        if(m_futureQuestions == null)
+        {
+            createQuestionList();
+        }
+
 
         ActivityGamePlayBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_game_play);
-        initializeGame(m_id);
+        initializeGame(pickQuestion());
 
         binding.setTemp(this);
         binding.setAnswers(m_answers);
 
+    }
+
+    private ArrayList<Question> getQuestionList(String futureQuestions)
+    {
+        if(futureQuestions == null) return null;
+
+        ArrayList<String> questionStrings = getList(futureQuestions);
+        ArrayList<Question> questions = new ArrayList<>();
+
+        for(String s : questionStrings)
+        {
+            questions.add(createQuestion(s));
+        }
+
+        return questions;
     }
 
     private void createQuestionList()
@@ -126,15 +150,31 @@ public class GamePlay extends AppCompatActivity {
         m_futureQuestions = new ArrayList<>();
 
         //add questions to list
-        for(int count=0; count < fields.length; count++)
+        for(Field f : fields)
         {
-            String file = fields[count].getName();
-            if(fields[count].getName().startsWith("q"))
+            String file = f.getName();
+            if(file.startsWith("q"))
             {
-                m_questions.add(file);
-                m_futureQuestions.add(file);
+                numberOfQuestions++;
+                Question q = createQuestion(file);
+                m_questions.add(q);
+                m_futureQuestions.add(q);
             }
         }
+    }
+
+    private Question createQuestion(String file)
+    {
+        int questionId = res.getIdentifier(file, "raw", getPackageName());
+        ArrayList<String> questionData = readFromFile(questionId);
+
+        String[] syllabs = questionData.get(2).split(",");
+        int correctId = Integer.parseInt(questionData.get(1)) - 1;
+
+        String correctAnswer = syllabs[correctId];
+        syllabs[correctId] = "space";
+
+        return new Question(questionId, file, questionData.get(0), correctAnswer, syllabs);
     }
 
     private ArrayList<String> getList(String q)
@@ -146,43 +186,40 @@ public class GamePlay extends AppCompatActivity {
         return new ArrayList<String>(Arrays.asList(questions));
     }
 
-    private int pickQuestion()
+    private Question pickQuestion()
     {
-        int identifier = -1;
-        // if no future questions exist, return -1;
-        if(m_futureQuestions.isEmpty()) return identifier;
+        if(m_futureQuestions.isEmpty()) return null;
 
-        // pick randomly if no error was made earlier
-        if(m_error.isEmpty())
-        {
-            int rand = (int)(Math.random()*m_futureQuestions.size());
-            String questionName = m_futureQuestions.get(rand);
-            m_futureQuestions.remove(questionName);
+        // pick randomly from future questions
+        int rand = (int)(Math.random()*m_futureQuestions.size());
+//        String questionName = m_futureQuestions.get(rand);
+//        m_futureQuestions.remove(questionName);
+        Question q = m_futureQuestions.get(rand);
+        m_futureQuestions.remove(q);
 
-            identifier = res.getIdentifier(questionName, "raw", getPackageName());
-        }
-
-        //TODO check errors
-
-        return identifier;
+        return q;//res.getIdentifier(questionName, "raw", getPackageName());
     }
 
-    private void initializeGame(final int questionId)
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void initializeGame(Question q)
     {
-        m_id = questionId;
-        ArrayList<String> text = readFromFile(questionId);
 
         //get the picture
-        int resourceId = res.getIdentifier(text.get(0), "drawable", getPackageName());
+        int resourceId = res.getIdentifier(q.getName(), "drawable", getPackageName());
         picture = res.getDrawable(resourceId);
         ((ImageView) findViewById(R.id.imageView)).setImageDrawable(picture);
 
-        //create the word
-        Word myWord = new Word(text.get(0));
+        //get the sound for picture
+        soundId = res.getIdentifier(q.getName(), "raw", getPackageName());
 
-        //get the letters from word
-        String[] wordLetters = text.get(2).split(",");
+        //get the letters of the word
+        String[] wordLetters = q.getWord();
         wordSize = wordLetters.length;
+
+        //get the correct answer
+        correctAnswer = q.getAnswer();
+
         LinearLayout lay_r_capture = findViewById(R.id.ll);
         lay_r_capture.removeAllViews();
         lay_r_capture.setOrientation(LinearLayout.HORIZONTAL);
@@ -192,15 +229,10 @@ public class GamePlay extends AppCompatActivity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(100, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
         lp.setMargins(1, 1, 1, 1);
         int i = 0;
-        int spaceIndex = Integer.parseInt(text.get(1));
+
         for (String s : wordLetters)
         {
             i++;
-            if(i == spaceIndex)
-            {
-                correctAnswer = s;
-                s = "space";
-            }
             ImageView iv = new ImageView(this);
             int resId = res.getIdentifier(s, "drawable", getPackageName());
             iv.setLayoutParams(lp);
@@ -213,8 +245,6 @@ public class GamePlay extends AppCompatActivity {
                 @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
                 @Override
                 public boolean onDrag(View v, DragEvent event) {
-                    int numberOfQuestions = 10;
-
                     switch (event.getAction()) {
                         case DragEvent.ACTION_DRAG_STARTED:
                             return true;
@@ -229,25 +259,37 @@ public class GamePlay extends AppCompatActivity {
                             //owner.removeView(view);
 
                             boolean isSpace = res.getResourceEntryName(v.getId()).equals("space");
-                            if(isSpace && correctId.equals(res.getResourceEntryName(view.getId())))
+                            if(isSpace)
                             {
-                                int answerId = res.getIdentifier(correctAnswer, "drawable", getPackageName());
-                                ((ImageView) v).setImageDrawable(res.getDrawable(answerId));
-                                answeredRight = true;
-                                //TODO add some happy stupid audio
-                                int nextQuestion = pickQuestion();
-
-                                if(nextQuestion > 0)
+                                String ans = res.getResourceEntryName(view.getId());
+                                String usersAnswer = m_answersNames[Integer.parseInt(ans.replace("answer","")) - 1];
+                                if (correctAnswer.equals(usersAnswer))
                                 {
-                                    m_id = nextQuestion;
-                                    initializeGame(m_id);
+                                    int answerId = res.getIdentifier(correctAnswer, "drawable", getPackageName());
+                                    ((ImageView) v).setImageDrawable(res.getDrawable(answerId));
+                                    answeredRight = true;
+                                    //TODO add some happy stupid audio
+                                    Question nextQuestion = pickQuestion();
+
+                                    if (nextQuestion != null)
+                                    {
+                                        initializeGame(nextQuestion);
+                                    } else {
+                                        gameFinished = true;
+                                        //TODO add some end Screen and stupider audio
+                                        finish();
+                                    }
+                                    return false;
                                 }
+
                                 else
                                 {
-                                    gameFinished = true;
-                                    //TODO add some end Screen and stupider audio
-                                    finish();
+                                    Error e = new Error(correctAnswer, usersAnswer);
+                                    m_error.add(e);
+                                    m_error.remove(m_error.get(0));
                                 }
+
+                                updateQuestionsByError();
                                 return false;
                             }
                             return true;
@@ -257,14 +299,11 @@ public class GamePlay extends AppCompatActivity {
             });
         }
 
-        //String[] answersNames = text.get(3).split(",");
-        String[] answersNames = getAnswers(correctAnswer, m_error);
+        m_answersNames = q.getAnswers();
 
         //generating the answers
         for (i = 0; i < 4; i++) {
-            if(correctAnswer.equals(answersNames[i]))
-                correctId = "answer" + Integer.toString(i+1);
-            int resId = res.getIdentifier(answersNames[i], "drawable", getPackageName());
+            int resId = res.getIdentifier(m_answersNames[i], "drawable", getPackageName());
 
             m_answers[i] = res.getDrawable(resId);
 
@@ -287,7 +326,6 @@ public class GamePlay extends AppCompatActivity {
                                     ClipData data = ClipData.newPlainText("name", imgName);
                                     View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(view);
                                     view.startDrag(data, shadowBuilder, view, 0);
-                                    view.setVisibility(View.INVISIBLE);
                                     return true;
                                 }
                                 case MotionEvent.ACTION_UP:
@@ -308,66 +346,30 @@ public class GamePlay extends AppCompatActivity {
         }
     }
 
-    private String[] getAnswers(String correctAnswer, ArrayList<Error> error)
+    private void updateQuestionsByError()
     {
-        String[] answers = new String[4];
-
-        answers[(int)(Math.random()*4)] = correctAnswer;
-
-        if(!error.isEmpty())
+ /*       for(Question q : m_questions)
         {
-            //TODO generate answers by errors
-        }
-
-        Field[] fields=R.drawable.class.getFields();
-
-        int rand;
-
-        for(int i = 0; i < 4;)
-        {
-            if(answers[i] != null)
+            String[] question = q.getAnswer().split("_");
+            TreeMap<String, String> phonemes = e.getPhonemes(question);
+            if(phonemes.size() > 0)
             {
-                i++;
-                continue;
+                for(String k : phonemes.keySet())
+                {
+                    q.addAnswer(k, phonemes.get(k));
+                    if(!m_futureQuestions.contains(q))
+                        m_futureQuestions.add(q);
+                }
             }
-
-            while(answers[i] == null)
-            {
-                rand = (int)(Math.random()*fields.length);
-
-                String file = fields[rand].getName();
-
-                // if the file is a syllab, add it to answers
-                if(isValidAnswer(file))
-                    answers[i] = file;
-            }
-            i++;
-
-        }
-
-        return answers;
+        }*/
     }
 
-    public boolean isValidAnswer(String s)
-    {
-        String[] vowels = {"a","aa","e","ee","i","ii","o","oo","u","uu","s","sn","n"};
-        ArrayList<String> vow = new ArrayList<String>(Arrays.asList(vowels));
-
-        String[] splitAnswer = s.split("_");
-
-        return vow.contains(splitAnswer[0]) && splitAnswer.length == 2;
-    }
     @Override
     protected void onStart()
     {
         super.onStart();
     }
 
-    @Override
-    public void onRestoreInstanceState(Bundle savedInstanceState) {
-        int id = res.getIdentifier(savedInstanceState.getString("currentQuestion"), "raw", getPackageName());
-        initializeGame(id);
-    }
 
     @Override
     public void onResume()
@@ -380,12 +382,6 @@ public class GamePlay extends AppCompatActivity {
     public void onPause()
     {
         super.onPause();
-
-        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-
-        editor.putInt("currentQuestion", m_id);
-        editor.commit();
     }
 
     @Override
@@ -399,22 +395,46 @@ public class GamePlay extends AppCompatActivity {
     {
         super.onDestroy();
 
+        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+
         if(gameFinished)
         {
-            SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-            SharedPreferences.Editor editor = preferences.edit();
-
             editor.clear();
             editor.commit();
         }
+
+        //keep current question id
+        editor.putInt("currentQuestion", m_id);
+
+        //keep lists of questions, future questions, and errors
+        String questions = "";
+        for(Question q : m_questions)
+        {
+            questions = questions.concat(q.getFileName() + " ");
+        }
+        String futureQuestions = "";
+        for(Question q : m_futureQuestions)
+        {
+            futureQuestions = futureQuestions.concat(q.getFileName() + " ");
+        }
+
+        String errors = "";
+        for(Error e : m_error)
+        {
+            errors = errors.concat(e.toString() + " ");
+        }
+
+        editor.putString("questions", questions);
+        editor.putString("futureQuestions", futureQuestions);
+        editor.putString("error", errors);
+
+        editor.commit();
 
     }
 
     public void sound(View view)
     {
-        Resources res = getResources();
-        String name = res.getResourceEntryName(view.getId());
-        int soundId = res.getIdentifier(name , "raw", getPackageName());
         MediaPlayer ring= MediaPlayer.create(this,soundId);
         ring.start();
     }

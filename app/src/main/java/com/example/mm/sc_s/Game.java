@@ -1,4 +1,4 @@
-package com.example.mm.sc_s;
+/*package com.example.mm.sc_s;
 
 import android.content.Context;
 import android.media.MediaPlayer;
@@ -10,7 +10,7 @@ import static java.security.AccessController.getContext;
 /**
  * Created by mm on 03/06/2018.
  */
-
+/*
 class Game {
     private Question currentLevel;
     private ErrorStats errStat;
@@ -36,4 +36,4 @@ class Game {
         //TODO generate next question according to error status
         return null;
     }
-}
+}*/
