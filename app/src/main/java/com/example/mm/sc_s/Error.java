@@ -47,20 +47,37 @@ public class Error
         return errors;
     }
 
-    public TreeMap<String, String> getPhonemes(String[] s)
+    //returns true if the phonemes are approximately equal, false if not
+    public static boolean comparePhonemes(String s1, String s2, boolean isVowel)
+    {
+        //if phonemes are vowels, we would want a & aa to be considered equal, for example
+        if(isVowel)
+            return s1.charAt(0) == s2.charAt(0);
+
+        //if phonemes are consonants, we would want emphasized and non-emphasized letters to be considered equal
+        boolean emphasized = s1.replace("e","").equals(s2) || s2.replace("e","").equals(s1);
+
+        //check that the consonant is not a letter that change pronounciation with emphasize ("dagesh")
+        boolean allowingEmphasize = !(s1.charAt(0) == 'b' || s1.charAt(0) == 'p' || s1.charAt(0) == 'k');
+
+        return s1.equals(s2) || (emphasized && allowingEmphasize);
+    }
+
+    //returns a list of the consonants and vowels which have been mistaken
+    public TreeMap<String, String> getPhonemes()
     {
         TreeMap<String, String> phonemes = new TreeMap<>();
 
-        if(!consonantError.first.equals(consonantError.second))
+        if(!comparePhonemes(consonantError.first, consonantError.second, false))
         {
-            if (consonantError.first.equals(s[1])) phonemes.put("consonant",consonantError.first);
-            if (consonantError.second.equals(s[1])) phonemes.put("consonant",consonantError.second);
+            phonemes.put("consonant1",consonantError.first);
+            phonemes.put("consonant2",consonantError.second);
         }
 
-        if(!vowelError.first.equals(vowelError.second))
+        if(!comparePhonemes(vowelError.first, vowelError.second, true))
         {
-            if (vowelError.first.equals(s[0])) phonemes.put("vowel",vowelError.first);
-            if (vowelError.second.equals(s[0])) phonemes.put("vowel",vowelError.second);
+            phonemes.put("vowel1",vowelError.first);
+            phonemes.put("vowel2",vowelError.second);
         }
 
         return phonemes;

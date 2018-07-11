@@ -268,6 +268,11 @@ public class GamePlay extends AppCompatActivity {
                                     int answerId = res.getIdentifier(correctAnswer, "drawable", getPackageName());
                                     ((ImageView) v).setImageDrawable(res.getDrawable(answerId));
                                     answeredRight = true;
+
+                                    //remove ancient errors from list - so no questions will be added based on them
+                                    if(!m_error.isEmpty())
+                                        m_error.remove(m_error.get(0));
+
                                     //TODO add some happy stupid audio
                                     Question nextQuestion = pickQuestion();
 
@@ -286,7 +291,8 @@ public class GamePlay extends AppCompatActivity {
                                 {
                                     Error e = new Error(correctAnswer, usersAnswer);
                                     m_error.add(e);
-                                    m_error.remove(m_error.get(0));
+                                    if(m_error.size() > 3)
+                                        m_error.remove(m_error.get(0));
                                 }
 
                                 updateQuestionsByError();
@@ -348,20 +354,19 @@ public class GamePlay extends AppCompatActivity {
 
     private void updateQuestionsByError()
     {
- /*       for(Question q : m_questions)
+        for(Question q : m_questions)
         {
-            String[] question = q.getAnswer().split("_");
-            TreeMap<String, String> phonemes = e.getPhonemes(question);
-            if(phonemes.size() > 0)
+            for (int i = m_error.size(); i > 0; i--)
             {
-                for(String k : phonemes.keySet())
+                Error e = m_error.get(i-1);
+
+                if(q.getAnswer() != correctAnswer && q.addAnswer(e.getPhonemes()) && !m_futureQuestions.contains(q))
                 {
-                    q.addAnswer(k, phonemes.get(k));
-                    if(!m_futureQuestions.contains(q))
-                        m_futureQuestions.add(q);
+                    m_futureQuestions.add(q);
+                    break;
                 }
             }
-        }*/
+        }
     }
 
     @Override

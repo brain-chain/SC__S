@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.TreeMap;
 
 /**
  * Created by mm on 18/06/2018.
@@ -44,22 +45,36 @@ public class Question
     public String getName() { return name; }
 
 
-    public void addAnswer(String key, String value)
+    public boolean addAnswer(TreeMap<String,String> phonemes)
     {
         Field[] fields=R.drawable.class.getFields();
 
-        String forSearch = key.equals("consonant") ? "_"+value : value;
+        String[] answerPhonemes = correctAnswer.split("_");
 
-        for(Field f : fields)
+        for (String k : phonemes.keySet())
         {
-            //add the appropriate answer for the known error
-            if(f.getName().contains(forSearch) && !f.getName().equals(correctAnswer))
-                m_answers.add(1, f.getName());
+            String value = phonemes.get(k);
 
-            //keep the number of answers 4
-            if(m_answers.size() > 4)
-                m_answers.remove(4);
+            //if no difference between answer and error phonemes, continue
+            if(k.charAt(0) == 'c' && phonemes.get(k).equals(answerPhonemes[1])) continue;
+            if(k.charAt(0) == 'v' && phonemes.get(k).equals(answerPhonemes[0])) continue;
+
+            value = k.charAt(0) == 'c' ? "_"+value : value;
+            for(Field f : fields)
+            {
+                if (f.getName().contains(value) && !f.getName().equals(correctAnswer))
+                {
+                    m_answers.add(f.getName());
+
+                    //keep the number of answers 4
+                    if (m_answers.size() > 4)
+                        //index 1 is the least recently added answer, therefore we can ommit it
+                        m_answers.remove(1);
+                    return true;
+                }
+            }
         }
+        return false;
     }
 
     public String[] getWord()
