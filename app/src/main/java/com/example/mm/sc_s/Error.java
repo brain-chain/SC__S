@@ -39,6 +39,7 @@ public class Error
         {
             for (String s : error)
             {
+                if(s.equals("")) continue;
                 String[] errorParts = s.split(";");
                 errors.add(new Error(errorParts[0], errorParts[1]));
             }
@@ -50,12 +51,13 @@ public class Error
     //returns true if the phonemes are approximately equal, false if not
     public static boolean comparePhonemes(String s1, String s2, boolean isVowel)
     {
-        //if phonemes are vowels, we would want a & aa to be considered equal, for example
+        //if phonemes are vowels, a & aa would be considered equal, as will n and s (sheva and no-punctuation)
         if(isVowel)
-            return s1.charAt(0) == s2.charAt(0);
+            return s1.charAt(0) == s2.charAt(0) ||
+                    s1.charAt(0) == 's' && s2.charAt(0) == 'n' || s1.charAt(0) == 'n' && s2.charAt(0) == 's';
 
         //if phonemes are consonants, we would want emphasized and non-emphasized letters to be considered equal
-        boolean emphasized = s1.replace("e","").equals(s2) || s2.replace("e","").equals(s1);
+        boolean emphasized = s1.replace("e","").equals(s2.replace("e",""));
 
         //check that the consonant is not a letter that change pronounciation with emphasize ("dagesh")
         boolean allowingEmphasize = !(s1.charAt(0) == 'b' || s1.charAt(0) == 'p' || s1.charAt(0) == 'k');

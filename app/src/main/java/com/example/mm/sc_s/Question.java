@@ -10,6 +10,9 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -23,7 +26,8 @@ public class Question
     private String fileName;
     private String[] word;
     private String correctAnswer;
-    private ArrayList<String> m_answers;
+    //private ArrayList<String> m_answers;
+    private Set<String> m_answers;
 
     public Question(int questionId, String file, String wordName, String trueAnswer, String[] syllabs)
     {
@@ -32,7 +36,7 @@ public class Question
         name = wordName;
         correctAnswer = trueAnswer;
 
-        m_answers = new ArrayList<>();
+        m_answers = new HashSet<>();//new ArrayList<>();
         m_answers.add(correctAnswer);
 
         word = syllabs;
@@ -56,8 +60,10 @@ public class Question
             String value = phonemes.get(k);
 
             //if no difference between answer and error phonemes, continue
-            if(k.charAt(0) == 'c' && phonemes.get(k).equals(answerPhonemes[1])) continue;
-            if(k.charAt(0) == 'v' && phonemes.get(k).equals(answerPhonemes[0])) continue;
+            if(k.charAt(0) == 'c' && SyllabComparator.comparePhonemes(phonemes.get(k),answerPhonemes[1],false))
+                continue;
+            if(k.charAt(0) == 'v' && SyllabComparator.comparePhonemes(phonemes.get(k),answerPhonemes[0],true))
+                continue;
 
             value = k.charAt(0) == 'c' ? "_"+value : value;
             for(Field f : fields)
@@ -99,18 +105,18 @@ public class Question
 
         String[] answers = new String[4];
 
-        answers[(int) (Math.random() * 4)] = correctAnswer;
-
-        int j = 1;
-        for(int i = 0; i < 4; )
+        for(String s : m_answers)
         {
-            if (answers[i] != null)
+            boolean answerAdded = false;
+            do
             {
-                i++;
-                continue;
-            }
-
-            answers[i] = m_answers.get(j++);
+                int random =(int)(Math.random() * 4);
+                if (answers[random] == null)
+                {
+                    answers[random] = s;
+                    answerAdded = true;
+                }
+            } while(!answerAdded);
         }
 
         return answers;

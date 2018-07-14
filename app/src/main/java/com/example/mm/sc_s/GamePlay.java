@@ -103,6 +103,8 @@ public class GamePlay extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        res = getResources();
+
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
         preferences.edit().clear().commit();
 
@@ -111,7 +113,6 @@ public class GamePlay extends AppCompatActivity {
 
         m_error = Error.toError(getList(preferences.getString("error", null)));
 
-        res = getResources();
 
         //means no previous state was saved
         if(m_futureQuestions == null)
@@ -137,10 +138,11 @@ public class GamePlay extends AppCompatActivity {
 
         for(String s : questionStrings)
         {
+            if(s.equals("")) continue;
             questions.add(createQuestion(s));
         }
 
-        return questions;
+        return questions.isEmpty() ? null : questions;
     }
 
     private void createQuestionList()
@@ -192,12 +194,11 @@ public class GamePlay extends AppCompatActivity {
 
         // pick randomly from future questions
         int rand = (int)(Math.random()*m_futureQuestions.size());
-//        String questionName = m_futureQuestions.get(rand);
-//        m_futureQuestions.remove(questionName);
+
         Question q = m_futureQuestions.get(rand);
         m_futureQuestions.remove(q);
 
-        return q;//res.getIdentifier(questionName, "raw", getPackageName());
+        return q;
     }
 
 
@@ -211,7 +212,7 @@ public class GamePlay extends AppCompatActivity {
         ((ImageView) findViewById(R.id.imageView)).setImageDrawable(picture);
 
         //get the sound for picture
-        soundId = res.getIdentifier(q.getName(), "raw", getPackageName());
+        //soundId = res.getIdentifier(q.getName(), "raw", getPackageName());
 
         //get the letters of the word
         String[] wordLetters = q.getWord();
@@ -232,6 +233,8 @@ public class GamePlay extends AppCompatActivity {
 
         for (String s : wordLetters)
         {
+            if(s.equals("n_e0"))
+                i += 0;
             i++;
             ImageView iv = new ImageView(this);
             int resId = res.getIdentifier(s, "drawable", getPackageName());
@@ -261,9 +264,13 @@ public class GamePlay extends AppCompatActivity {
                             boolean isSpace = res.getResourceEntryName(v.getId()).equals("space");
                             if(isSpace)
                             {
+                                String usersAnswer = getAnswerName(view);
+                                if(SyllabComparator.compareSyllabs(correctAnswer,usersAnswer))
+/*
                                 String ans = res.getResourceEntryName(view.getId());
                                 String usersAnswer = m_answersNames[Integer.parseInt(ans.replace("answer","")) - 1];
-                                if (correctAnswer.equals(usersAnswer))
+                                if(SyllabComparator.compareSyllabs(correctAnswer,usersAnswer))
+*/
                                 {
                                     int answerId = res.getIdentifier(correctAnswer, "drawable", getPackageName());
                                     ((ImageView) v).setImageDrawable(res.getDrawable(answerId));
@@ -289,6 +296,7 @@ public class GamePlay extends AppCompatActivity {
 
                                 else
                                 {
+                                    view.setVisibility(View.VISIBLE);
                                     Error e = new Error(correctAnswer, usersAnswer);
                                     m_error.add(e);
                                     if(m_error.size() > 3)
@@ -316,6 +324,7 @@ public class GamePlay extends AppCompatActivity {
             int originalId = res.getIdentifier("answer" + (i + 1), "id", getPackageName());
             ImageView iv = findViewById(originalId);
             iv.setImageDrawable(m_answers[i]);
+            iv.setVisibility(View.VISIBLE);
             iv.setOnTouchListener(
                     new View.OnTouchListener() {
                         private boolean touched = false;
@@ -332,17 +341,20 @@ public class GamePlay extends AppCompatActivity {
                                     ClipData data = ClipData.newPlainText("name", imgName);
                                     View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(view);
                                     view.startDrag(data, shadowBuilder, view, 0);
+                                    view.setVisibility(View.INVISIBLE);
                                     return true;
                                 }
-                                case MotionEvent.ACTION_UP:
-                                case MotionEvent.ACTION_CANCEL: {
+/*                                case MotionEvent.ACTION_BUTTON_RELEASE:
+                                //case MotionEvent.ACTION_CANCEL:
+                                    {
                                     touched = false;
-                                    if (!correctAnswer.equals(res.getResourceEntryName(view.getId()))) {
+                                    if (!SyllabComparator.compareSyllabs(correctAnswer,getAnswerName((ImageView)view)))
+                                    {
                                         view.setVisibility(View.VISIBLE);
                                         return true;
                                     }
                                     return false;
-                                }
+                                }*/
                                 default:
                                     break;
                             }
@@ -351,18 +363,30 @@ public class GamePlay extends AppCompatActivity {
                     });
         }
     }
+//!SyllabComparator.compareSyllabs(correctAnswer,res.getResourceEntryName(view.getId()))
+
+    //gets the answer's syllab from the ImageView
+    private String getAnswerName(ImageView view)
+    {
+        String ans = res.getResourceEntryName(view.getId());
+        return m_answersNames[Integer.parseInt(ans.replace("answer","")) - 1];
+    }
 
     private void updateQuestionsByError()
     {
         for(Question q : m_questions)
         {
+            if(q.getAnswer().equals(correctAnswer)) break;
             for (int i = m_error.size(); i > 0; i--)
             {
                 Error e = m_error.get(i-1);
 
-                if(q.getAnswer() != correctAnswer && q.addAnswer(e.getPhonemes()) && !m_futureQuestions.contains(q))
+                if(q.addAnswer(e.getPhonemes()))
                 {
-                    m_futureQuestions.add(q);
+                    if(!m_futureQuestions.contains(q))
+                    {
+                        m_futureQuestions.add(q);
+                    }
                     break;
                 }
             }
