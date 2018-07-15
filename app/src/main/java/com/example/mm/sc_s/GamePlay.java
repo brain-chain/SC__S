@@ -106,7 +106,7 @@ public class GamePlay extends AppCompatActivity {
         res = getResources();
 
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-        preferences.edit().clear().commit();
+ //       preferences.edit().clear().commit();
 
         m_questions = getQuestionList(preferences.getString("questions", null));
         m_futureQuestions = getQuestionList(preferences.getString("futureQuestions", null));
@@ -206,6 +206,8 @@ public class GamePlay extends AppCompatActivity {
     private void initializeGame(Question q)
     {
 
+        if(Integer.parseInt(q.getFileName().replace("q_","")) > 42)
+            System.out.println("bla");
         //get the picture
         int resourceId = res.getIdentifier(q.getName(), "drawable", getPackageName());
         picture = res.getDrawable(resourceId);
@@ -266,11 +268,6 @@ public class GamePlay extends AppCompatActivity {
                             {
                                 String usersAnswer = getAnswerName(view);
                                 if(SyllabComparator.compareSyllabs(correctAnswer,usersAnswer))
-/*
-                                String ans = res.getResourceEntryName(view.getId());
-                                String usersAnswer = m_answersNames[Integer.parseInt(ans.replace("answer","")) - 1];
-                                if(SyllabComparator.compareSyllabs(correctAnswer,usersAnswer))
-*/
                                 {
                                     int answerId = res.getIdentifier(correctAnswer, "drawable", getPackageName());
                                     ((ImageView) v).setImageDrawable(res.getDrawable(answerId));
@@ -342,19 +339,19 @@ public class GamePlay extends AppCompatActivity {
                                     View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(view);
                                     view.startDrag(data, shadowBuilder, view, 0);
                                     view.setVisibility(View.INVISIBLE);
-                                    return true;
-                                }
-/*                                case MotionEvent.ACTION_BUTTON_RELEASE:
-                                //case MotionEvent.ACTION_CANCEL:
-                                    {
-                                    touched = false;
-                                    if (!SyllabComparator.compareSyllabs(correctAnswer,getAnswerName((ImageView)view)))
-                                    {
-                                        view.setVisibility(View.VISIBLE);
-                                        return true;
-                                    }
                                     return false;
-                                }*/
+                                }
+                                case MotionEvent.ACTION_CANCEL:
+                                case MotionEvent.ACTION_UP:
+                                    {
+//                                    touched = false;
+//                                    if (!SyllabComparator.compareSyllabs(correctAnswer,getAnswerName((ImageView)view)))
+//                                    {
+                                        view.setVisibility(View.VISIBLE);
+//                                        return false;
+//                                    }
+                                    return false;
+                                }
                                 default:
                                     break;
                             }
