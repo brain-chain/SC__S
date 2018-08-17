@@ -24,40 +24,30 @@
             android:id="@+id/answer1"
             android:layout_width="68dp"
             android:layout_height="79dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginRight="8dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginLeft="28dp"
-            android:layout_marginTop="106dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="36dp"
             android:contentDescription="TODO"
             android:src="@{answers[0], default=@drawable/exit}"
-            app:layout_constraintBottom_toTopOf="@+id/imageView"
-            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/imageView"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.0" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
             android:id="@+id/answer2"
             android:layout_width="68dp"
             android:layout_height="79dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginRight="28dp"
-            android:layout_marginTop="106dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="36dp"
             android:contentDescription="TODO"
             android:src="@{answers[1], default=@drawable/exit}"
-            app:layout_constraintBottom_toTopOf="@+id/imageView"
             app:layout_constraintEnd_toStartOf="@+id/imageView"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.0" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
             android:id="@+id/answer3"
             android:layout_width="68dp"
             android:layout_height="79dp"
-            android:layout_marginEnd="28dp"
-            android:layout_marginRight="28dp"
-            android:layout_marginTop="60dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="88dp"
             android:contentDescription="TODO"
             android:src="@{answers[2], default=@drawable/exit}"
             app:layout_constraintEnd_toStartOf="@+id/imageView"
@@ -67,9 +57,8 @@
             android:id="@+id/answer4"
             android:layout_width="68dp"
             android:layout_height="79dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginLeft="28dp"
-            android:layout_marginTop="60dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="88dp"
             android:contentDescription="TODO"
             android:src="@{answers[3], default=@drawable/exit}"
             app:layout_constraintStart_toEndOf="@+id/imageView"
@@ -77,18 +66,17 @@
 
         <ImageView
             android:id="@+id/imageView"
-            android:layout_width="143dp"
-            android:layout_height="141dp"
+            android:layout_width="220dp"
+            android:layout_height="147dp"
             android:contentDescription="TODO"
             android:cropToPadding="false"
             android:onClick="sound"
             android:src="@{temp.picture, default=@drawable/exit}"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.502"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.432" />
+            app:layout_constraintVertical_bias="0.402" />
 
 
         <LinearLayout

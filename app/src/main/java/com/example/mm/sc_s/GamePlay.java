@@ -13,6 +13,7 @@ import android.os.Build;
 import android.provider.ContactsContract;
 import android.renderscript.ScriptGroup;
 import android.support.annotation.RequiresApi;
+import android.support.constraint.ConstraintLayout;
 import android.support.v4.view.MotionEventCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -39,6 +40,8 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Dictionary;
+import java.util.Enumeration;
 import java.util.Queue;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,6 +55,7 @@ import static java.lang.System.exit;
 public class GamePlay extends AppCompatActivity {
     public Drawable picture;
     private int m_id;
+    private Question m_question;
     private Drawable[] m_answers = new Drawable[4];
     private Drawable[] word;
     private int wordSize;
@@ -65,6 +69,22 @@ public class GamePlay extends AppCompatActivity {
     private int soundId;
     private String[] m_answersNames;
     private int numberOfQuestions;
+    private boolean dropped;
+
+    private static Map<String, String> imageToSound;
+    static
+    {
+        imageToSound = new TreeMap<>();
+
+        imageToSound.put("a","o");
+        imageToSound.put("b","v");
+        imageToSound.put("k","h");
+        imageToSound.put("q","k");
+        imageToSound.put("xl","s");
+        imageToSound.put("xr","x");
+        imageToSound.put("j","t");
+    }
+
 
 
     private ArrayList<String> readFromFile(int id)
@@ -106,23 +126,24 @@ public class GamePlay extends AppCompatActivity {
         res = getResources();
 
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
- //       preferences.edit().clear().commit();
 
         m_questions = getQuestionList(preferences.getString("questions", null));
         m_futureQuestions = getQuestionList(preferences.getString("futureQuestions", null));
-
+        m_question = createQuestion(preferences.getString("currentQuestion", null));
         m_error = Error.toError(getList(preferences.getString("error", null)));
 
 
         //means no previous state was saved
-        if(m_futureQuestions == null)
+        if(m_futureQuestions == null && m_question == null)
         {
             createQuestionList();
         }
 
+        m_question = pickQuestion();
 
         ActivityGamePlayBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_game_play);
-        initializeGame(pickQuestion());
+
+        initializeGame(m_question);
 
         binding.setTemp(this);
         binding.setAnswers(m_answers);
@@ -167,6 +188,8 @@ public class GamePlay extends AppCompatActivity {
 
     private Question createQuestion(String file)
     {
+        if(file == null) return null;
+
         int questionId = res.getIdentifier(file, "raw", getPackageName());
         ArrayList<String> questionData = readFromFile(questionId);
 
@@ -190,10 +213,12 @@ public class GamePlay extends AppCompatActivity {
 
     private Question pickQuestion()
     {
+        if(m_question != null) return m_question;
+
         if(m_futureQuestions.isEmpty()) return null;
 
         // pick randomly from future questions
-        int rand = (int)(Math.random()*m_futureQuestions.size());
+        int rand = (int) (Math.random() * m_futureQuestions.size());
 
         Question q = m_futureQuestions.get(rand);
         m_futureQuestions.remove(q);
@@ -205,16 +230,30 @@ public class GamePlay extends AppCompatActivity {
     @SuppressLint("ClickableViewAccessibility")
     private void initializeGame(Question q)
     {
+        m_question = q;
+        ConstraintLayout cl = (ConstraintLayout) findViewById(R.id.cl);
+        cl.setOnDragListener(new View.OnDragListener() {
+            @Override
+            public boolean onDrag(View view, DragEvent dragEvent) {
+                switch (dragEvent.getAction()) {
+                    case DragEvent.ACTION_DROP:
+                        // Dropped, reassign View to ViewGroup
+                        ImageView iv = (ImageView) dragEvent.getLocalState();
+                        iv.setVisibility(View.VISIBLE);
+                    default:
+                        break;
+                }
+                return false;
+            }
+        });
 
-        if(Integer.parseInt(q.getFileName().replace("q_","")) > 42)
-            System.out.println("bla");
         //get the picture
         int resourceId = res.getIdentifier(q.getName(), "drawable", getPackageName());
         picture = res.getDrawable(resourceId);
         ((ImageView) findViewById(R.id.imageView)).setImageDrawable(picture);
 
         //get the sound for picture
-        //soundId = res.getIdentifier(q.getName(), "raw", getPackageName());
+        soundId = res.getIdentifier(q.getName(), "raw", getPackageName());
 
         //get the letters of the word
         String[] wordLetters = q.getWord();
@@ -235,8 +274,6 @@ public class GamePlay extends AppCompatActivity {
 
         for (String s : wordLetters)
         {
-            if(s.equals("n_e0"))
-                i += 0;
             i++;
             ImageView iv = new ImageView(this);
             int resId = res.getIdentifier(s, "drawable", getPackageName());
@@ -244,70 +281,71 @@ public class GamePlay extends AppCompatActivity {
             iv.setId(resId);
             iv.setImageDrawable(res.getDrawable(resId));
             lay_r_capture.addView(iv);
-            iv.setOnDragListener(new View.OnDragListener() {
-                @SuppressLint("ResourceType")
-                @TargetApi(Build.VERSION_CODES.M)
-                @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
-                @Override
-                public boolean onDrag(View v, DragEvent event) {
-                    switch (event.getAction()) {
-                        case DragEvent.ACTION_DRAG_STARTED:
-                            return true;
-                        case DragEvent.ACTION_DRAG_ENTERED:
-                            break;
-                        case DragEvent.ACTION_DRAG_ENDED:
-                            break;
-                        case DragEvent.ACTION_DROP:
-                            // Dropped, reassign View to ViewGroup
-                            ImageView view = (ImageView) event.getLocalState();
-                            ViewGroup owner = (ViewGroup) view.getParent();
-                            //owner.removeView(view);
+            if(s.equals("space"))
+            {
+                iv.setOnDragListener(new View.OnDragListener() {
+                    @SuppressLint("ResourceType")
+                    @TargetApi(Build.VERSION_CODES.M)
+                    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
+                    @Override
+                    public boolean onDrag(View v, DragEvent event) {
+                        switch (event.getAction()) {
+                            case DragEvent.ACTION_DRAG_STARTED:
+                                return true;
+                            case DragEvent.ACTION_DRAG_ENTERED:
+                                break;
+                            case DragEvent.ACTION_DRAG_ENDED:
+                            case DragEvent.ACTION_DRAG_EXITED:
+                                v.setVisibility(View.VISIBLE);
+                                break;
+                            case DragEvent.ACTION_DROP:
+                                // Dropped, reassign View to ViewGroup
+                                ImageView view = (ImageView) event.getLocalState();
+                                ViewGroup owner = (ViewGroup) view.getParent();
+                                //owner.removeView(view);
 
-                            boolean isSpace = res.getResourceEntryName(v.getId()).equals("space");
-                            if(isSpace)
-                            {
-                                String usersAnswer = getAnswerName(view);
-                                if(SyllabComparator.compareSyllabs(correctAnswer,usersAnswer))
-                                {
-                                    int answerId = res.getIdentifier(correctAnswer, "drawable", getPackageName());
-                                    ((ImageView) v).setImageDrawable(res.getDrawable(answerId));
-                                    answeredRight = true;
+                                boolean isSpace = res.getResourceEntryName(v.getId()).equals("space");
+                                if (isSpace) {
+                                    String usersAnswer = getAnswerName(view);
+                                    if (SyllabComparator.compareSyllabs(correctAnswer, usersAnswer)) {
+                                        view.setVisibility(View.INVISIBLE);
+                                        int answerId = res.getIdentifier(correctAnswer, "drawable", getPackageName());
+                                        ((ImageView) v).setImageDrawable(res.getDrawable(answerId));
+                                        answeredRight = true;
+                                        m_question = null;
 
-                                    //remove ancient errors from list - so no questions will be added based on them
-                                    if(!m_error.isEmpty())
-                                        m_error.remove(m_error.get(0));
+                                        //remove ancient errors from list - so no questions will be added based on them
+                                        if (!m_error.isEmpty())
+                                            m_error.remove(m_error.get(0));
 
-                                    //TODO add some happy stupid audio
-                                    Question nextQuestion = pickQuestion();
+                                        //TODO add some happy stupid audio
+                                        m_question = pickQuestion();
 
-                                    if (nextQuestion != null)
-                                    {
-                                        initializeGame(nextQuestion);
+                                        if (m_question != null) {
+                                            initializeGame(m_question);
+                                        } else {
+                                            gameFinished = true;
+                                            //TODO add some end Screen and stupider audio
+                                            finish();
+                                        }
+                                        return false;
                                     } else {
-                                        gameFinished = true;
-                                        //TODO add some end Screen and stupider audio
-                                        finish();
+                                        view.setVisibility(View.VISIBLE);
+                                        Error e = new Error(correctAnswer, usersAnswer);
+                                        m_error.add(e);
+                                        if (m_error.size() > 3)
+                                            m_error.remove(m_error.get(0));
                                     }
+
+                                    updateQuestionsByError();
                                     return false;
                                 }
-
-                                else
-                                {
-                                    view.setVisibility(View.VISIBLE);
-                                    Error e = new Error(correctAnswer, usersAnswer);
-                                    m_error.add(e);
-                                    if(m_error.size() > 3)
-                                        m_error.remove(m_error.get(0));
-                                }
-
-                                updateQuestionsByError();
-                                return false;
-                            }
-                            return true;
+                                return true;
+                        }
+                        return false;
                     }
-                    return false;
-                }
-            });
+                });
+            }
         }
 
         m_answersNames = q.getAnswers();
@@ -324,34 +362,24 @@ public class GamePlay extends AppCompatActivity {
             iv.setVisibility(View.VISIBLE);
             iv.setOnTouchListener(
                     new View.OnTouchListener() {
-                        private boolean touched = false;
+                        private boolean moved = false;
 
                         @Override
                         public boolean onTouch(View view, MotionEvent event) {
-                            if (!touched) {
-                                //sound(view);
-                                touched = true;
-                            }
                             switch (event.getAction()) {
-                                case MotionEvent.ACTION_DOWN: {
+                                case MotionEvent.ACTION_DOWN:
+                                {
+                                    sound(view);
                                     String imgName = res.getResourceEntryName(view.getId());
                                     ClipData data = ClipData.newPlainText("name", imgName);
                                     View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(view);
                                     view.startDrag(data, shadowBuilder, view, 0);
                                     view.setVisibility(View.INVISIBLE);
-                                    return false;
+                                    moved = false;
+                                    break;
                                 }
                                 case MotionEvent.ACTION_CANCEL:
                                 case MotionEvent.ACTION_UP:
-                                    {
-//                                    touched = false;
-//                                    if (!SyllabComparator.compareSyllabs(correctAnswer,getAnswerName((ImageView)view)))
-//                                    {
-                                        view.setVisibility(View.VISIBLE);
-//                                        return false;
-//                                    }
-                                    return false;
-                                }
                                 default:
                                     break;
                             }
@@ -359,8 +387,8 @@ public class GamePlay extends AppCompatActivity {
                         }
                     });
         }
+        sound((findViewById(R.id.imageView)));
     }
-//!SyllabComparator.compareSyllabs(correctAnswer,res.getResourceEntryName(view.getId()))
 
     //gets the answer's syllab from the ImageView
     private String getAnswerName(ImageView view)
@@ -371,6 +399,8 @@ public class GamePlay extends AppCompatActivity {
 
     private void updateQuestionsByError()
     {
+        int maxAdd = 5;
+        int j = 0;
         for(Question q : m_questions)
         {
             if(q.getAnswer().equals(correctAnswer)) break;
@@ -380,8 +410,9 @@ public class GamePlay extends AppCompatActivity {
 
                 if(q.addAnswer(e.getPhonemes()))
                 {
-                    if(!m_futureQuestions.contains(q))
+                    if(!m_futureQuestions.contains(q) && j < 5)
                     {
+                        j++;
                         m_futureQuestions.add(q);
                     }
                     break;
@@ -430,8 +461,8 @@ public class GamePlay extends AppCompatActivity {
             editor.commit();
         }
 
-        //keep current question id
-        editor.putInt("currentQuestion", m_id);
+        //keep current question
+        editor.putString("currentQuestion", m_question.getFileName());
 
         //keep lists of questions, future questions, and errors
         String questions = "";
@@ -461,7 +492,41 @@ public class GamePlay extends AppCompatActivity {
 
     public void sound(View view)
     {
-        MediaPlayer ring= MediaPlayer.create(this,soundId);
+        int soundId;
+
+        //if we make the sound for main picture
+        if(((ImageView)view).getDrawable().equals(picture))
+             soundId = res.getIdentifier(m_question.getName(), "raw", getPackageName());
+
+        //if we make the sound for one of the answers
+        else soundId = toSound(getAnswerName((ImageView) view));
+
+        MediaPlayer ring= MediaPlayer.create(this, soundId);
         ring.start();
+    }
+
+    public int toSound(String name)
+    {
+        String[] answerParts = name.split("_");
+
+        if(answerParts[0].length() > 1)
+        {
+            if(answerParts[0].equals("sn")) answerParts[0] = "e";
+            else answerParts[0] = answerParts[0].substring(0,1);
+        }
+
+        if(answerParts[0].equals("s")) answerParts[0] = "n";
+
+        if(answerParts[1].length() > 1 && answerParts[1].charAt(answerParts[1].length()-1) == 'e')
+            if(answerParts[1].charAt(0) == 'b') answerParts[1] = "b";
+            else if(answerParts[1].charAt(0) == 'k') answerParts[1] = "k";
+            else if(answerParts[1].charAt(0) == 'p') answerParts[1] = "p";
+            else answerParts[1] = answerParts[1].substring(0,answerParts[1].length()-1);
+
+        if(imageToSound.containsKey(answerParts[1])) answerParts[1] = imageToSound.get(answerParts[1]);
+
+        if(answerParts[0].equals("n") && answerParts[1].equals("e")) answerParts[1] = "a";
+        return res.getIdentifier(answerParts[0]+"_"+answerParts[1], "raw", getPackageName());
+
     }
 }
